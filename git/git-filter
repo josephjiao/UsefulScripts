@@ -1,0 +1,6 @@
+git filter-branch -f  --msg-filter '
+                   if [ "$GIT_COMMIT" = "77351cd31221bd8cadbe1972f42b7a9a1e2eae41" ];
+                   then
+                      echo "test"; 
+                   fi' 77351..HEAD 
+

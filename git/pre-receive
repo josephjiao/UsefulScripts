@@ -1,0 +1,58 @@
+#!/bin/sh
+#
+
+set_new_commits() {
+    nl=$'\n'
+
+    # Get all the current branches, not'd as we want only new ones
+    new_commits=$(git rev-parse --not --branches)
+    
+    new_hash=$(git rev-parse $refname)
+    new_commits=${new_commits/^$new_hash/}
+
+
+    # Put back newrev without the not
+    new_commits=${new_commits}${nl}${newrev}
+
+    # Put in ^oldrev if it's not a new branch
+    if [ "$oldrev" != "0000000000000000000000000000000000000000" ] ; then
+        new_commits=${new_commits}${nl}^${oldrev}
+    fi
+
+    new_commits=${new_commits/$nl$nl/$nl}
+    new_commits=${new_commits/#$nl/}
+}
+
+while read oldrev newrev refname;do
+	if [ -z "$refname" -o -z "$oldrev" -o -z "$newrev" ]; then
+		echo "Usage: $0 <ref> <oldrev> <newrev>" >&2
+		exit 1
+	fi
+
+	#ignore delete commit
+	zero="0000000000000000000000000000000000000000"
+	if [ "$newrev" = "$zero" ]; then 
+		break
+	fi
+
+	#caculate new commits
+	set_new_commits
+
+	#echo `echo "$new_commits" | git rev-list --reverse --stdin` >&2
+	#echo "=============" >&2
+	for commit in `echo "$new_commits" | git rev-list --reverse --stdin ` ;  do
+		message="$(git rev-list -n 1 $commit --pretty=format:'%s%n%b' | grep -v $commit)"
+
+	#	echo "$message" >&2
+		lineCount=$( echo "$message"|wc -l)
+		#echo "$lineCount" >&2
+		if (( $lineCount > 100 )); then
+			echo "Message for commit can't be large than 100 lines: $commit." >&2
+			exit 1
+		fi
+	done
+done
+
+
+# --- Finished
+exit 0
